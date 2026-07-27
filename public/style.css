@@ -233,6 +233,18 @@ button.lang { color: #333; }
   height: 168px;
   image-rendering: pixelated;
 }
+.qr-popover .qr-img svg {
+  display: block;
+  width: 184px;
+  height: 184px;
+}
+.qr-popover .qr-fallback {
+  max-width: 200px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-mute);
+  text-align: center;
+}
 .qr-popover .qr-url {
   font-size: 11px;
   line-height: 1.4;
@@ -301,10 +313,31 @@ button.lang { color: #333; }
   pointer-events: none;
 }
 
+/* ---------- 二维码遮罩（仅移动端显示） ---------- */
+.qr-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .32);
+  z-index: 24;
+}
+
 /* ---------- 响应式 ---------- */
 @media (max-width: 768px) {
   .topbar { font-size: 12.5px; padding: 4px 8px; flex-wrap: wrap; }
   .actions { gap: 4px 8px; }
   .placeholder { padding: 10px 12px 20px; font-size: 12.5px; }
   .status-popover { right: 8px; min-width: 180px; }
+
+  /* 手机端二维码弹层改为底部居中卡片 + 遮罩，避免遮挡顶栏与编辑区 */
+  .qr-overlay { display: block; }
+  .qr-popover {
+    top: auto;
+    right: auto;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(92vw, 320px);
+    max-width: 320px;
+  }
 }
