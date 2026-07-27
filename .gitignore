@@ -1,0 +1,18 @@
+# 依赖（本项目零依赖，此处为通用兜底）
+node_modules/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 环境变量
+.env
+.env.local
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 本地运行时
+*.pid
