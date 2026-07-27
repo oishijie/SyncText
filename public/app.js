@@ -51,7 +51,7 @@ let myId = null;
 let amFirst = false;
 let pc = null;
 let channel = null;
-let remoteChannel = null;
+let peerId = null;
 let makingOffer = false;
 let ignoreOffer = false;
 let applyingRemote = false;
@@ -118,17 +118,23 @@ function handleSignal(msg) {
     myId = msg.id;
     amFirst = !msg.peers || msg.peers.length === 0;
     if (myIdEl) myIdEl.textContent = myId.slice(0, 8);
-    if (peerIdEl) peerIdEl.textContent = (msg.peers && msg.peers[0] ? msg.peers[0].slice(0, 8) : '—');
+    const peers = msg.peers || [];
+    if (peers.length) { peerId = peers[0]; if (peerIdEl) peerIdEl.textContent = peerId.slice(0, 8); }
+    else if (peerIdEl) peerIdEl.textContent = '—';
     ensurePeer();
+    maybeCreateChannel();
     setStatus(amFirst ? 'waiting' : 'connecting', amFirst ? '等待节点' : '节点连接中');
   } else if (msg.type === 'peer-join') {
+    peerId = msg.id;
     if (peerIdEl) peerIdEl.textContent = (msg.id || '').slice(0, 8);
     ensurePeer();
+    maybeCreateChannel();
     setStatus('connecting', '节点连接中');
   } else if (msg.type === 'peer-leave') {
     if (peerIdEl) peerIdEl.textContent = '—';
+    peerId = null;
     if (pc) { try { pc.close(); } catch (_) {} }
-    pc = null; channel = null; remoteChannel = null;
+    pc = null; channel = null;
     setStatus('waiting', '等待节点');
   } else if (msg.type === 'signal') {
     onSignal(msg.data, msg.from);
@@ -159,15 +165,24 @@ function ensurePeer() {
     else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') setStatus('connecting', '节点连接中');
   };
 
-  channel = pc.createDataChannel('sync');
-  setupChannel(channel);
-  pc.ondatachannel = (e) => { remoteChannel = e.channel; setupChannel(remoteChannel); };
+  pc.ondatachannel = (e) => { channel = e.channel; setupChannel(channel); };
+  maybeCreateChannel();
+}
+
+// 单一 DataChannel：仅由 id 较小的一端创建（避免两端各建一条导致先到者的通道 offer 被丢弃、永远打不开）
+function maybeCreateChannel() {
+  if (!pc || !myId || !peerId || channel) return;
+  if (myId < peerId) {
+    channel = pc.createDataChannel('sync');
+    setupChannel(channel);
+  }
+  // 否则等待对方通过 ondatachannel 把通道推过来
 }
 
 function setupChannel(ch) {
   ch.onopen = () => {
     setStatus('ready', '已就绪');
-    if (amFirst && ch === channel && editor.value) sendText();
+    if (editor.value) sendText();
   };
   ch.onclose = () => setStatus('waiting', '等待节点');
   ch.onmessage = (e) => {
