@@ -199,72 +199,6 @@ button.lang { color: #333; }
 .status-popover .row.peer { color: #d4d4d4; }
 .status-popover .row.peer span { color: #fafafa; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
-/* ---------- 二维码弹窗 ---------- */
-.qr-popover {
-  position: absolute;
-  top: calc(var(--topbar-h) + 4px);
-  right: 12px;
-  z-index: 30;
-  width: 240px;
-  padding: 14px 14px 12px;
-  background: #ffffff;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, .14);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-.qr-popover .qr-title {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-soft);
-}
-.qr-popover .qr-img {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-.qr-popover .qr-img img {
-  display: block;
-  width: 168px;
-  height: 168px;
-  image-rendering: pixelated;
-}
-.qr-popover .qr-img svg {
-  display: block;
-  width: 184px;
-  height: 184px;
-}
-.qr-popover .qr-fallback {
-  max-width: 200px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-mute);
-  text-align: center;
-}
-.qr-popover .qr-url {
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--text-mute);
-  word-break: break-all;
-  text-align: center;
-}
-.qr-popover .qr-copy {
-  margin-top: 2px;
-  padding: 6px 14px;
-  font: 600 12.5px/1 var(--font);
-  color: #fff;
-  background: var(--link);
-  border: 0;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.qr-popover .qr-copy:hover { background: #2f5bd6; }
-.qr-popover .qr-copy:focus-visible { outline: 2px solid #b9ceff; outline-offset: 2px; }
-
 /* ---------- 浮动按钮 ---------- */
 .floating-actions {
   position: fixed;
@@ -313,31 +247,10 @@ button.lang { color: #333; }
   pointer-events: none;
 }
 
-/* ---------- 二维码遮罩（仅移动端显示） ---------- */
-.qr-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, .32);
-  z-index: 24;
-}
-
 /* ---------- 响应式 ---------- */
 @media (max-width: 768px) {
   .topbar { font-size: 12.5px; padding: 4px 8px; flex-wrap: wrap; }
   .actions { gap: 4px 8px; }
   .placeholder { padding: 10px 12px 20px; font-size: 12.5px; }
   .status-popover { right: 8px; min-width: 180px; }
-
-  /* 手机端二维码弹层改为底部居中卡片 + 遮罩，避免遮挡顶栏与编辑区 */
-  .qr-overlay { display: block; }
-  .qr-popover {
-    top: auto;
-    right: auto;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(92vw, 320px);
-    max-width: 320px;
-  }
 }

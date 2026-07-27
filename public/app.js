@@ -41,14 +41,6 @@ const myIdEl       = document.getElementById('myId');
 const peerIdEl     = document.getElementById('peerId');
 const serverRow    = popover ? popover.querySelector('.row.server') : null;
 const toastEl      = document.getElementById('toast');
-const btnQR        = document.getElementById('btnQR');
-const qrPopover    = document.getElementById('qrPopover');
-const qrOverlay    = document.getElementById('qrOverlay');
-const qrImg        = document.getElementById('qrImg');
-const qrUrl        = document.getElementById('qrUrl');
-const btnQrCopy    = document.getElementById('btnQrCopy');
-let qrRendered = false;
-let qrOpen = false;
 
 // 顶栏 URL 同步
 try { history.replaceState(null, '', '/r/' + encodeURIComponent(room)); } catch (_) {}
@@ -310,49 +302,6 @@ document.addEventListener('click', (e) => {
 
 btnLang && btnLang.addEventListener('click', () => {
   btnLang.textContent = btnLang.textContent === 'EN' ? '中文' : 'EN';
-});
-
-// ---------- 二维码入口 ----------
-function renderQr() {
-  if (qrRendered || !qrImg) return;
-  try {
-    const Qr = (typeof qrcode !== 'undefined') ? qrcode : (window.qrcode);
-    if (typeof Qr !== 'function') throw new Error('qrcode 库未加载');
-    const qr = Qr(0, 'M');
-    qr.addData(shareUrl);
-    qr.make();
-    // 用矢量 SVG（清晰、无 data-URI 兼容问题、可被 CSS 控尺寸）
-    qrImg.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 10, scalable: true });
-    if (qrUrl) qrUrl.textContent = shareUrl;
-    qrRendered = true;
-  } catch (e) {
-    qrRendered = false; // 允许下次打开重试
-    if (qrImg) qrImg.innerHTML = '<div class="qr-fallback">二维码生成失败，请点击下方「复制链接」</div>';
-  }
-}
-
-function setQr(open) {
-  qrOpen = open;
-  if (qrPopover) qrPopover.hidden = !open;
-  if (qrOverlay) qrOverlay.hidden = !open;
-  if (open) {
-    renderQr();
-    if (popoverOpen) { popoverOpen = false; if (popover) popover.hidden = true; }
-  }
-}
-
-btnQR && btnQR.addEventListener('click', () => setQr(!qrOpen));
-qrOverlay && qrOverlay.addEventListener('click', () => setQr(false));
-
-btnQrCopy && btnQrCopy.addEventListener('click', async (e) => {
-  e.stopPropagation();
-  if (await copyToClipboard(shareUrl)) showToast('链接已复制');
-});
-
-document.addEventListener('click', (e) => {
-  if (!qrOpen || !qrPopover) return;
-  if (qrPopover.contains(e.target) || btnQR.contains(e.target) || (qrOverlay && qrOverlay.contains(e.target))) return;
-  setQr(false);
 });
 
 // 浮动按钮：反馈按钮指向 GitHub 仓库；其余为装饰占位（与原站右下圆形按钮位置一致）
