@@ -39,7 +39,7 @@
   └──────────────────────┘                      └──────────────────────┘
 ```
 
-- **信令服务器**（`server.js`）：零依赖 WebSocket 服务，负责房间管理与 `join / offer / answer / ICE` 中继。
+- **信令服务器**：本地用 `server.js`（零依赖 WebSocket 服务，负责房间管理与 `join / offer / answer / ICE` 中继）；部署到 Cloudflare 时改为 **Durable Object**（`src/room.js`，每个房间一个实例，天然按房间隔离），由入口 Worker（`src/worker.js`）把 `/ws?room=<id>` 路由到对应房间。
 - **业务数据**：两端通过 `RTCPeerConnection` 的 `DataChannel` 直接传输，字符级实时同步。
 - **房间机制**：`/r/<房间ID>`，分享同一链接即两端配对。
 
@@ -49,7 +49,11 @@
 
 ```
 synctext-clone/
-├── server.js            # 零依赖 WebSocket 信令 + 静态文件服务（Node 原生 http/crypto）
+├── server.js            # 本地版：零依赖 WebSocket 信令 + 静态文件服务（Node 原生 http/crypto）
+├── src/
+│   ├── worker.js        # Cloudflare 版入口：/ws 路由到 Durable Object，其余交 Assets
+│   └── room.js          # Cloudflare 版：Durable Object 房间级信令中继（等价 server.js 逻辑）
+├── wrangler.toml        # Cloudflare 部署配置
 ├── package.json         # 仅含 start 脚本，无第三方依赖
 ├── public/
 │   ├── index.html       # 页面结构（顶栏 + 编辑器 + 状态弹窗 + 浮动按钮）
@@ -57,8 +61,11 @@ synctext-clone/
 │   ├── app.js           # WebRTC 完美协商 + DataChannel 同步 + 顶栏交互
 │   └── qrcode.js        # 本地二维码库（离线可用）
 ├── test-ws.js           # 端到端信令测试脚本（原生 WebSocket 客户端）
-└── README.md
+├── README.md
+└── LICENSE
 ```
+
+> 前端 `public/` 被本地版与 Cloudflare 版共用：前端以**同源**方式连接 `/ws?room=<id>`，因此两种部署无需区分前端代码。
 
 ---
 
@@ -95,6 +102,40 @@ node server.js
 ### 公网 / 部署
 - 正式对外服务建议套一层 **HTTPS**（如 Nginx + 证书 / Cloudflare Tunnel），否则部分浏览器会限制非安全上下文下的 WebSocket 与 WebRTC。
 - 当前实现不含 TURN 中继，若两端处于对称型 NAT，可能无法直连。可后续接入公共 / 自建 TURN 服务器。
+
+---
+
+## ☁️ 部署到 Cloudflare
+
+Cloudflare **不能**直接运行 `server.js` 这种长连接 Node 进程，需要把信令服务换成 Cloudflare 原生形态：
+
+| 本地版（`server.js`） | Cloudflare 版 |
+| --- | --- |
+| Node 进程 + 手写 WebSocket | **Worker**（`src/worker.js`）+ **Durable Object**（`src/room.js`） |
+| 静态文件由同一进程服务 | **Workers Assets** 托管 `public/`（SPA 回退让 `/r/<id>` 落到 `index.html`） |
+
+Durable Object 以 `room` 名为实例 id，**每个房间一个对象**，天然按房间隔离；业务文本仍走两端 DataChannel 直连。
+
+### 前置
+
+- 已安装 `wrangler`
+- 环境变量 `CLOUDFLARE_ACCOUNT_ID` 与 `CLOUDFLARE_API_TOKEN` 已就绪（本机已具备；`wrangler.toml` 未硬编码 account_id，自动读取）
+
+### 部署
+
+```bash
+cd synctext-clone
+wrangler deploy
+# 完成后访问 https://<subdomain>.workers.dev/
+# 同一 /r/<room> 链接两端配对即可同步
+```
+
+### 要点
+
+- 前端**同源**连接 `/ws?room=<id>`，所以本地（`server.js`）与 Cloudflare（Worker）共用 `public/`，无需改前端。
+- 公网 / 手机访问建议走 **HTTPS**：Worker 自带 TLS，`wss://` 直连，避免浏览器限制非安全上下文。
+- 若 `*.workers.dev` 子域在本机不可达，给 Worker 绑定**自定义域**（如 `w.xxx.xyz`）访问更稳定。
+- 跨对称型 NAT 如需公网可达，再接入 **TURN** 中继（当前仅 STUN）。
 
 ---
 

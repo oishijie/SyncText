@@ -1,0 +1,21 @@
+name = "synctext"
+main = "src/worker.js"
+compatibility_date = "2024-11-01"
+
+# 账户 ID 不写在这里也能部署：wrangler 会自动读取环境变量 CLOUDFLARE_ACCOUNT_ID（本机已设置）
+# 如需固定，可取消下行注释：
+# account_id = "102f26cf6428e86b57f17b06581142e4"
+
+# 静态资源：托管 public/ 目录，/r/<room> 等未知路径回退到 index.html（SPA 模式）
+assets = { directory = "public", binding = "ASSETS", not_found_handling = "single-page-application" }
+
+# 房间级信令中继：每个房间一个 Durable Object 实例
+[[durable_objects.bindings]]
+name = "Room"
+class_name = "Room"
+
+# 首次部署必须声明 Durable Object 类（迁移）
+# 免费版计划需用 new_sqlite_classes（SQLite 存储）
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]

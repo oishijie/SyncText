@@ -16,3 +16,6 @@ desktop.ini
 
 # 本地运行时
 *.pid
+
+# Cloudflare 本地开发状态（wrangler dev 生成，不入库）
+.wrangler/

@@ -90,7 +90,7 @@ editor.addEventListener('input', () => {
 function connectSignaling() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   try {
-    ws = new WebSocket(proto + '://' + location.host + '/ws');
+    ws = new WebSocket(proto + '://' + location.host + '/ws?room=' + encodeURIComponent(room));
   } catch (err) {
     setStatus('disconnected', '服务器未连接');
     setTimeout(connectSignaling, 1500);
