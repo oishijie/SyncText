@@ -14,6 +14,7 @@
         <span class="status" id="status" data-state="ready">已就绪</span>
         <button class="link" id="btnStatus">状态详情</button>
         <button class="link" id="btnShare">分享链接</button>
+        <button class="link" id="btnQR">二维码</button>
         <button class="link" id="btnHome">首页</button>
         <button class="link" id="btnClear">清空</button>
         <button class="link" id="btnCopyText">复制文本</button>
@@ -57,7 +58,7 @@
               <li>支持跨公网同步，但不保证总是可用；实测手机使用流量、电脑使用 Wi-Fi 可用。</li>
               <li>VPN 可能导致无法建立 P2P 连接，可配置绕开局域网代理模式；电脑开 VPN、手机关 VPN 的组合实测可用。</li>
               <li>同一房间最多同时在线 3 个页面，超过后会踢出最早加入的设备。</li>
-              <li>问题反馈可发送至邮箱：<a href="mailto:genwebappcom@gmail.com">genwebappcom@gmail.com</a></li>
+              <li>问题反馈与源码：<a href="https://github.com/worldoi/SyncText" target="_blank" rel="noopener noreferrer">github.com/worldoi/SyncText</a></li>
             </ul>
           </section>
         </div>
@@ -67,6 +68,13 @@
         <div class="row server" data-state="connected">与信令服务器已连接</div>
         <div class="row peer">本机：<span id="myId">—</span></div>
         <div class="row peer">对方：<span id="peerId">—</span></div>
+      </div>
+
+      <div class="qr-popover" id="qrPopover" role="dialog" aria-label="扫码加入此房间" hidden>
+        <div class="qr-title">扫码加入此房间</div>
+        <div class="qr-img" id="qrImg"></div>
+        <div class="qr-url" id="qrUrl"></div>
+        <button class="qr-copy" id="btnQrCopy">复制链接</button>
       </div>
     </main>
   </div>

@@ -199,6 +199,60 @@ button.lang { color: #333; }
 .status-popover .row.peer { color: #d4d4d4; }
 .status-popover .row.peer span { color: #fafafa; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
+/* ---------- 二维码弹窗 ---------- */
+.qr-popover {
+  position: absolute;
+  top: calc(var(--topbar-h) + 4px);
+  right: 12px;
+  z-index: 30;
+  width: 240px;
+  padding: 14px 14px 12px;
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .14);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.qr-popover .qr-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+.qr-popover .qr-img {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.qr-popover .qr-img img {
+  display: block;
+  width: 168px;
+  height: 168px;
+  image-rendering: pixelated;
+}
+.qr-popover .qr-url {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-mute);
+  word-break: break-all;
+  text-align: center;
+}
+.qr-popover .qr-copy {
+  margin-top: 2px;
+  padding: 6px 14px;
+  font: 600 12.5px/1 var(--font);
+  color: #fff;
+  background: var(--link);
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.qr-popover .qr-copy:hover { background: #2f5bd6; }
+.qr-popover .qr-copy:focus-visible { outline: 2px solid #b9ceff; outline-offset: 2px; }
+
 /* ---------- 浮动按钮 ---------- */
 .floating-actions {
   position: fixed;

@@ -41,6 +41,13 @@ const myIdEl       = document.getElementById('myId');
 const peerIdEl     = document.getElementById('peerId');
 const serverRow    = popover ? popover.querySelector('.row.server') : null;
 const toastEl      = document.getElementById('toast');
+const btnQR        = document.getElementById('btnQR');
+const qrPopover    = document.getElementById('qrPopover');
+const qrImg        = document.getElementById('qrImg');
+const qrUrl        = document.getElementById('qrUrl');
+const btnQrCopy    = document.getElementById('btnQrCopy');
+let qrRendered = false;
+let qrOpen = false;
 
 // 顶栏 URL 同步
 try { history.replaceState(null, '', '/r/' + encodeURIComponent(room)); } catch (_) {}
@@ -304,10 +311,47 @@ btnLang && btnLang.addEventListener('click', () => {
   btnLang.textContent = btnLang.textContent === 'EN' ? '中文' : 'EN';
 });
 
-// 浮动按钮仅做装饰占位（与原站右下圆形按钮位置一致）
+// ---------- 二维码入口 ----------
+function renderQr() {
+  if (qrRendered || !qrImg) return;
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(shareUrl);
+    qr.make();
+    qrImg.innerHTML = qr.createImgTag(6, 10);
+    if (qrUrl) qrUrl.textContent = shareUrl;
+    qrRendered = true;
+  } catch (e) { /* qrcode 库未加载时静默 */ }
+}
+
+btnQR && btnQR.addEventListener('click', () => {
+  if (!qrPopover) return;
+  qrOpen = !qrOpen;
+  qrPopover.hidden = !qrOpen;
+  if (qrOpen) renderQr();
+  if (popoverOpen) { popoverOpen = false; popover.hidden = true; }
+});
+
+btnQrCopy && btnQrCopy.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  if (await copyToClipboard(shareUrl)) showToast('链接已复制');
+});
+
+document.addEventListener('click', (e) => {
+  if (!qrOpen || !qrPopover) return;
+  if (qrPopover.contains(e.target) || btnQR.contains(e.target)) return;
+  qrOpen = false;
+  qrPopover.hidden = true;
+});
+
+// 浮动按钮：反馈按钮指向 GitHub 仓库；其余为装饰占位（与原站右下圆形按钮位置一致）
 document.querySelectorAll('.float-btn').forEach((el) => {
   el.addEventListener('click', (e) => {
     e.preventDefault();
+    if (el.classList.contains('feedback')) {
+      window.open('https://github.com/worldoi/SyncText', '_blank', 'noopener');
+      return;
+    }
     showToast(el.title || '操作');
   });
 });
