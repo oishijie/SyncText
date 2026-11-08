@@ -50,14 +50,19 @@
           发文件
         </button>
         <button class="btn ghost" id="btnShare">分享链接</button>
+        <button class="btn ghost" id="btnCopyText" title="复制全部文本">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2"/></svg>
+          <span>复制文本</span>
+        </button>
+        <button class="btn ghost" id="btnClear" title="清空两端内容">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>清空</span>
+        </button>
         <div class="menu-wrap">
           <button class="btn ghost icon" id="btnMore" aria-label="更多操作" aria-haspopup="menu">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
           </button>
           <div class="menu" id="moreMenu" role="menu" hidden>
-            <button class="menu-item" id="btnCopyText" role="menuitem">复制文本</button>
-            <button class="menu-item" id="btnClear" role="menuitem">清空</button>
-            <div class="menu-sep"></div>
             <button class="menu-item" id="btnTheme" role="menuitem">主题 · 自动</button>
             <button class="menu-item lang" id="btnLang" role="menuitem" title="切换语言">EN</button>
             <button class="menu-item" id="btnReconnect" role="menuitem">重连接</button>
@@ -100,6 +105,7 @@
               <li>支持跨公网同步，但不保证总是可用；实测手机流量、电脑 Wi-Fi 可用。</li>
               <li>VPN 可能导致无法建立 P2P 连接，可配置绕开局域网代理模式。</li>
               <li>房间无人数上限，但页面按两人场景设计，建议两人使用。</li>
+              <li>问题反馈与源码：<a href="https://github.com/oishijie/SyncText" target="_blank" rel="noopener noreferrer">github.com/oishijie/SyncText</a></li>
             </ul>
           </details>
         </div>

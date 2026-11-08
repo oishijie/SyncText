@@ -728,7 +728,13 @@ html[data-theme="dark"] .btn.primary { color: #0e0f13; }
   .brand-name { display: none; }
   .room-pill { max-width: 34vw; overflow: hidden; }
   .room-pill #room { overflow: hidden; text-overflow: ellipsis; }
-  #btnShare { display: none; } /* 移动端用房间胶囊复制分享链接 */
+  #btnShare { display: none; } /* 移动端用房间胶囊打开分享弹窗 */
+  /* 状态胶囊收成纯圆点（点击仍可看详情），防止长文案挤爆顶栏 */
+  .status-pill { padding: 0 9px; gap: 0; }
+  .status-pill #status { display: none; }
+  /* 高频按钮在窄屏收成纯图标，保证顶栏放得下 */
+  #btnCopyText, #btnClear { padding: 0 10px; }
+  #btnCopyText span, #btnClear span { display: none; }
   .btn { height: 32px; }
   .btn.primary { padding: 0 11px; }
   .stage { padding: 14px 12px 0; }
