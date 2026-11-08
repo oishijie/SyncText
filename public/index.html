@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SyncText · 网页间实时文本同步</title>
+  <script>
+    // 尽早应用主题，避免深色用户看到白屏闪烁
+    try {
+      var _t = localStorage.getItem('st.theme');
+      if (_t === 'dark' || _t === 'light') document.documentElement.dataset.theme = _t;
+    } catch (_) {}
+  </script>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -13,12 +20,15 @@
       <nav class="actions">
         <span class="status" id="status" data-state="ready">已就绪</span>
         <button class="link" id="btnStatus">状态详情</button>
+        <button class="link" id="btnSend">发文件</button>
         <button class="link" id="btnShare">分享链接</button>
         <button class="link" id="btnHome">首页</button>
         <button class="link" id="btnClear">清空</button>
         <button class="link" id="btnCopyText">复制文本</button>
         <button class="link" id="btnReconnect">重连接</button>
+        <button class="link" id="btnTheme" title="切换主题：自动 / 深色 / 浅色">自动</button>
         <button class="link lang" id="btnLang" title="切换语言">EN</button>
+        <input type="file" id="fileInput" multiple hidden />
       </nav>
     </header>
 
@@ -44,6 +54,7 @@
             <ul>
               <li>手机语音输入：手机负责长语音输入，电脑负责接收、整理并粘贴到大模型、文档或其他应用。</li>
               <li>跨端安全同步：在手机、电脑、平板之间临时同步链接、地址、代码片段和备忘，无需登录。</li>
+              <li>互传文件：点「发文件」或直接把文件拖进页面，对方确认后 P2P 直传，带进度、断点续传和 SHA-256 校验。</li>
             </ul>
           </section>
 
@@ -56,7 +67,7 @@
               <li>页面内容有本地缓存，刷新后不会丢失。</li>
               <li>支持跨公网同步，但不保证总是可用；实测手机使用流量、电脑使用 Wi-Fi 可用。</li>
               <li>VPN 可能导致无法建立 P2P 连接，可配置绕开局域网代理模式；电脑开 VPN、手机关 VPN 的组合实测可用。</li>
-              <li>同一房间最多同时在线 3 个页面，超过后会踢出最早加入的设备。</li>
+              <li>房间无人数上限，但页面按两人场景设计，人多了内容会互相覆盖，建议两人使用。</li>
               <li>问题反馈与源码：<a href="https://github.com/worldoi/SyncText" target="_blank" rel="noopener noreferrer">github.com/worldoi/SyncText</a></li>
             </ul>
           </section>
@@ -67,8 +78,30 @@
         <div class="row server" data-state="connected">与信令服务器已连接</div>
         <div class="row peer">本机：<span id="myId">—</span></div>
         <div class="row peer">对方：<span id="peerId">—</span></div>
+        <div class="row hint" id="netHint" hidden></div>
+        <label class="row opt"><input type="checkbox" id="autoAccept" checked /> 自动接收文件</label>
       </div>
     </main>
+  </div>
+
+  <!-- 文件接收确认 -->
+  <div class="confirm-box" id="confirmBox" role="dialog" aria-label="文件接收确认" hidden>
+    <div class="confirm-title">收到文件</div>
+    <div class="confirm-name" id="confirmName"></div>
+    <div class="confirm-meta" id="confirmMeta"></div>
+    <div class="confirm-hint" id="confirmHint"></div>
+    <div class="confirm-acts">
+      <button id="btnAccept">接收</button>
+      <button id="btnReject" class="danger">拒绝</button>
+    </div>
+  </div>
+
+  <!-- 传输卡片堆栈 -->
+  <div class="transfers" id="transfers" hidden></div>
+
+  <!-- 拖放遮罩 -->
+  <div class="drop-mask" id="dropMask" hidden>
+    <div class="drop-inner">松开即发送给对方</div>
   </div>
 
   <div class="floating-actions" aria-hidden="true">

@@ -22,7 +22,7 @@ export default {
       return stub.fetch(request);
     }
 
-    // 静态资源（index.html / app.js / style.css / qrcode.js ...）
+    // 静态资源（index.html / app.js / style.css / sha256-worker.js ...）
     return env.ASSETS.fetch(request);
   },
 };

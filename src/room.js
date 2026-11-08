@@ -52,7 +52,8 @@ export class Room {
         broadcast({ type: 'peer-join', id: entry.id }, entry);
       } else if (msg.type === 'signal') {
         // 转发 offer / answer / ICE 给房间内其他端
-        broadcast({ type: 'signal', id: entry.id, data: msg.data }, entry);
+        // 字段必须叫 from：前端靠它判定完美协商的 polite 端（与本地版 server.js 保持一致）
+        broadcast({ type: 'signal', from: entry.id, data: msg.data }, entry);
       }
     });
 

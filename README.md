@@ -1,27 +1,36 @@
 # SyncText
 
-基于 **WebRTC P2P** 的「网页间实时文本同步」工具 —— 任意两台带浏览器的设备，打开同一房间链接即可实时互相同步文本，**数据点对点直传，不经过业务服务器**。
+基于 **WebRTC P2P** 的「网页间实时文本同步 + 文件互传」工具 —— 任意两台带浏览器的设备，打开同一房间链接即可实时互相同步文本、互传文件，**数据点对点直传，不经过业务服务器**。
 
 > **灵感与致谢**：本项目为 [V2EX 帖子](https://www.v2ex.com/t/1199100) 中分享的 [SyncText](https://synctext.genwebapp.com/) 的开源复刻版，并对照其界面做了一比一还原。原项目解决的核心痛点：PC 端没有豆包语音输入，于是用**手机语音输入 → 网页实时同步到 PC → 直接黏贴给大模型当 prompt**。本仓库完整复刻其「房间 + 实时同步」体验，并附带一套**零依赖、可自托管**的实现。
+>
+> 文件传输的协议设计（128KB 分块 / 位图断点续传 / SHA-256 校验 / 背压水位）移植自 [Link Mesh](https://github.com/hesanyue50-lang/link-mesh)（AGPL-3.0），因此本项目整体以 AGPL-3.0 开源。
 
 ---
 
 ## ✨ 特性
 
 - **字符级实时双向同步**：一端输入 / 粘贴，另一端即时显示（基于 `requestAnimationFrame` 节流）。
-- **顶栏状态机**：`已就绪 → 等待对方 → 已 P2P 直连`，一眼看清连接状态。
-- **状态详情弹窗**：展示信令服务器连接情况、本机 / 对方 8 位短 ID。
+- **P2P 文件互传**：点「发文件」或把文件拖进页面即可发送：
+  - 128KB 分块 + 接收确认卡片（60 秒不响应自动拒绝）
+  - **SHA-256 校验**：发送前流式计算，接收端边收边算，完成后比对，不一致立即报错
+  - **断点续传**：接收端已收块位图定期落盘（OPFS），对方重新发送同一文件自动跳过已收块；传输中可随时暂停 / 继续 / 取消
+  - 传输卡片显示进度条与实时速度，文本同步与文件传输分通道互不阻塞
+  - 大文件内存占用恒定（接收数据直接写磁盘，不经内存堆积）
+- **深色 / 浅色 / 跟随系统**三态主题，顶栏一键切换。
+- **顶栏状态机**：`已就绪 → 等待对方 → 已 P2P 直连`，一眼看清连接状态；建连失败 60 秒内给出归因提示（禁 UDP / 不同网段 / 对称 NAT）。
+- **状态详情弹窗**：展示信令服务器连接情况、本机 / 对方 8 位短 ID、自动接收开关。
 - **操作按钮**：
+  - `发文件` —— 选择文件发送（也可全页拖放）
   - `分享链接` —— 复制当前房间 URL（带 toast 提示）
-  - `二维码` —— 弹出当前房间 URL 的二维码，手机扫码即可加入（使用内置 `qrcode.js`）
-  - `首页` —— 返回并重新生成随机房间
+  - `首页` —— 返回首页（默认房间为固定值 `0808`，建议分享带自定义房间号的链接）
   - `清空` —— 二次确认后，两端同步清空
   - `复制文本` —— 一键复制编辑器全部内容
   - `重连接` —— 防抖后自动重载恢复连接
+  - `主题` —— 浅色 / 深色 / 跟随系统循环切换
   - `EN` —— 语言标签切换（占位，切换按钮文字）
-- **全屏编辑器 + 占位说明**：首次进入显示使用步骤、常用方式、注意事项（含 GitHub 仓库链接）。
 - **右侧浮动按钮**：「反馈」点击打开 GitHub 仓库；Copilot 为 UI 占位。
-- **零第三方依赖**：信令服务器用 Node 原生 `http` / `crypto` 手写 RFC6455 WebSocket；前端无需打包工具。二维码库 `qrcode.js` 已内置本地副本，离线可用。
+- **零第三方依赖**：信令服务器用 Node 原生 `http` / `crypto` 手写 RFC6455 WebSocket；前端无需打包工具，SHA-256 为自研增量实现（`public/sha256-worker.js`）。
 
 ---
 
@@ -41,7 +50,7 @@
 ```
 
 - **信令服务器**：本地用 `server.js`（零依赖 WebSocket 服务，负责房间管理与 `join / offer / answer / ICE` 中继）；部署到 Cloudflare 时改为 **Durable Object**（`src/room.js`，每个房间一个实例，天然按房间隔离），由入口 Worker（`src/worker.js`）把 `/ws?room=<id>` 路由到对应房间。
-- **业务数据**：两端通过 `RTCPeerConnection` 的 `DataChannel` 直接传输，字符级实时同步。
+- **业务数据**：两端通过 `RTCPeerConnection` 的 DataChannel 直接传输——`sync` 通道跑文本同步，`file` 通道跑文件传输（JSON 控制帧 + 二进制数据块），互不阻塞。
 - **房间机制**：`/r/<房间ID>`，分享同一链接即两端配对。
 
 ---
@@ -57,10 +66,10 @@ synctext-clone/
 ├── wrangler.toml        # Cloudflare 部署配置
 ├── package.json         # 仅含 start 脚本，无第三方依赖
 ├── public/
-│   ├── index.html       # 页面结构（顶栏 + 编辑器 + 状态弹窗 + 浮动按钮）
-│   ├── style.css        # 样式（浅色主题，对照原站 1:1 还原）
-│   ├── app.js           # WebRTC 完美协商 + DataChannel 同步 + 顶栏交互
-│   └── qrcode.js        # 本地二维码库（离线可用）
+│   ├── index.html       # 页面结构（顶栏 + 编辑器 + 状态弹窗 + 传输卡片 + 浮动按钮）
+│   ├── style.css        # 样式（深浅双主题，对照原站 1:1 还原）
+│   ├── app.js           # WebRTC 完美协商 + 双通道（文本/文件）+ 顶栏交互
+│   └── sha256-worker.js # 零依赖增量 SHA-256（Web Worker，文件校验用）
 ├── test-ws.js           # 端到端信令测试脚本（原生 WebSocket 客户端）
 ├── README.md
 └── LICENSE
@@ -85,7 +94,7 @@ node server.js
 # 修改端口：PORT=8080 node server.js
 
 # 3. 打开浏览器
-#    http://localhost:3000  → 自动跳转到随机房间 /r/<id>
+#    http://localhost:3000  → 默认进入固定房间 0808（改动地址栏 /r/<房间号> 即可自定房间）
 ```
 
 ---
@@ -149,9 +158,32 @@ wrangler deploy
 | `{type:'join', room}` | C → S | 加入房间 |
 | `{type:'joined', id, room, peers}` | S → C | 加入成功，返回本端 ID 与已在线 peer |
 | `{type:'peer-join', id}` | S → C | 有新 peer 加入 |
-| `{type:'signal', data:{description|candidate}}` | C ⇄ S ⇄ C | 转发 SDP / ICE |
+| `{type:'signal', from, data:{description|candidate}}` | C ⇄ S ⇄ C | 转发 SDP / ICE（`from` 用于判定完美协商的 polite 端） |
 
 业务文本通过 DataChannel 直传，不经过信令服务器。
+
+---
+
+## 📦 文件传输协议（file 通道）
+
+控制消息为 JSON 文本帧，数据块为二进制帧（`uint32 fileId + uint32 chunkIndex + 原始字节`，小端）。同一通道支持双向并发传输，靠 fileId 路由。
+
+| 控制消息 | 说明 |
+| --- | --- |
+| `file-offer {fileId, name, size, mime, chunkSize, totalChunks, sha256}` | 发送请求，sha256 为发送前流式计算结果 |
+| `file-accept {fileId, bitmap}` | 同意接收；bitmap 为 Base64 已收块位图（断点续传时回传） |
+| `file-reject {fileId, reason}` | 拒绝（用户拒绝或 60 秒超时） |
+| `file-pause / file-resume / file-cancel / file-ping` | 暂停 / 继续 / 取消 / 暂停期保活 |
+| `file-done {fileId, sha256}` | 发送完毕，等待接收端校验 |
+| `file-result {fileId, ok}` | 接收端 SHA-256 比对结论 |
+
+**断点续传语义**：
+- 接收端把已收块写入 OPFS（浏览器私有文件区），位图每 1.5 秒随磁盘同步保存到 localStorage；
+- 接收方刷新页面后，对方重新发送同一文件（同哈希同尺寸）会自动续传，跳过已收块；
+- 发送方刷新后文件句柄丢失，需从头重发（接收端已收的部分仍会被复用）；
+- 校验失败即丢弃断点，避免坏位图导致"永远跳块"的死循环。
+
+**隐私**：文件数据同样走 P2P DataChannel 直传，信令服务器只见 SDP/ICE；接收完成后由浏览器下载到本地下载目录，云端不留任何副本。
 
 ---
 
@@ -161,11 +193,13 @@ wrangler deploy
 - 多端网格同步（同一房间 > 2 人）
 - 端到端加密
 - 历史记录与离线消息
-- 房间二维码扫码入口（已完成：顶栏「二维码」按钮弹出，使用内置 `qrcode.js`）
+- 网页版完整互传站（聊天式收发 + 文件浏览，参考 Link Mesh 的产品形态）
 - 真正的多语言文案（当前 EN 仅切换按钮文字）
 
 ---
 
 ## 📄 License
 
-[MIT](LICENSE) —— 自由使用、修改与分发。复刻灵感来自原版 SyncText，保留对原作者的致谢。
+本项目基于 **[AGPL-3.0](LICENSE)** 开源。
+
+文件传输协议设计移植自 [Link Mesh](https://github.com/hesanyue50-lang/link-mesh)（AGPL-3.0），特此致谢；依据协议要求，本衍生作品同样以 AGPL-3.0 发行。若你将本项目部署为网络服务，需依协议向使用者提供本仓库源码。文本同步部分灵感来自原版 SyncText，保留对原作者的致谢。
