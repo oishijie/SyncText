@@ -328,9 +328,10 @@ function applyRemote(m) {
 // ---------- 文件传输（协议移植自 Link Mesh，AGPL-3.0） ----------
 // 控制消息走 file 通道 JSON 文本帧；数据块是二进制帧：uint32 fileId + uint32 chunkIndex + 原始字节
 // 同一通道可双向同时传输，靠 fileId 路由到各自的传输任务
-const FILE_CHUNK = 128 * 1024;        // 分块大小（同 Link Mesh CHUNK_SIZE）
-const HIGH_WATER = 1024 * 1024;       // 背压高水位：超过暂停入队
-const LOW_WATER = 256 * 1024;         // 背压低水位：恢复发送
+const FILE_CHUNK = 128 * 1024;        // 基准分块（实际按 maxMessageSize 自适应，见 beginSendFile）
+const READ_BLOCK = 4 * 1024 * 1024;   // 每次读 4MB 再在内存里切块，消除每块一次的 await 往返
+const HIGH_WATER = 4 * 1024 * 1024;   // 背压高水位：跨网高 RTT 下 1MB 窗口填不满管道
+const LOW_WATER = 1 * 1024 * 1024;    // 背压低水位：恢复发送
 const MAX_FRAME_BYTES = 2 * 1024 * 1024;
 const transfers = new Map();          // fileId -> transfer
 const sendQueue = [];                 // 发送队列（同一时刻只跑一个发送任务）
@@ -542,6 +543,15 @@ function startSendFile(file) {
 }
 
 async function beginSendFile(file) {
+  // 分块大小按链路 maxMessageSize 自适应（实测该值是真实约束：
+  // 超过它发大消息会有明显额外开销，64KB 链路发 128KB 反而慢 ~40%）
+  const mms = (fileChannel && fileChannel.maxMessageSize) || 65536;
+  let chunkSize = FILE_CHUNK;
+  if (mms >= 262144) chunkSize = 256 * 1024;
+  else if (mms >= 131072) chunkSize = 131072;
+  else if (mms >= 65536) chunkSize = 65536;
+  else chunkSize = Math.max(16384, Math.floor(mms / 16384) * 16384);
+
   const t = {
     dir: 'send',
     fileId: newFileId(),
@@ -549,7 +559,7 @@ async function beginSendFile(file) {
     name: file.name || '未命名',
     size: file.size,
     mime: file.type || 'application/octet-stream',
-    chunkSize: FILE_CHUNK,
+    chunkSize,
     state: 'hashing',
     next: 0,
     pauseLocal: false,
@@ -559,8 +569,14 @@ async function beginSendFile(file) {
     speedT: 0,
     speedBytes: 0,
     speedVal: 0,
+    // 块读缓冲与帧缓冲（泵循环里填充/复用）
+    blkBuf: null,
+    blkStart: 0,
+    blkCount: 0,
+    frameBuf: new Uint8Array(8 + chunkSize),
   };
-  t.total = Math.max(1, Math.ceil(t.size / FILE_CHUNK));
+  // 总块数必须按自适应后的 chunkSize 计算，否则与发送泵的实际切块数不一致会永久卡死
+  t.total = Math.max(1, Math.ceil(t.size / t.chunkSize));
   transfers.set(t.fileId, t);
   makeCard(t);
   // 先流式算 SHA-256，算完才发 offer（同 Link Mesh：进度置 -1 的阶段）
@@ -627,19 +643,30 @@ async function pumpSend(t) {
       if (t.next >= t.total) break;
       if (!fileChannel || fileChannel.readyState !== 'open') { failTransfer(t, '连接已断开'); break; }
       if (fileChannel.bufferedAmount > HIGH_WATER) { await waitForDrain(t); continue; }
-      const start = t.next * t.chunkSize;
-      const end = Math.min(start + t.chunkSize, t.size);
-      let buf;
-      try { buf = await t.file.slice(start, end).arrayBuffer(); }
-      catch (_) { failTransfer(t, '本地文件读取失败'); break; }
-      if (t.state !== 'sending') break; // 等待读取期间被取消
-      if (t.pauseLocal || t.pauseRemote || fileChannel.bufferedAmount > HIGH_WATER) continue; // 重新走循环判断
-      const frame = new Uint8Array(8 + (end - start));
-      const dv = new DataView(frame.buffer);
+
+      // 当前块不在块缓冲内时，一次读 READ_BLOCK 再在内存中切块
+      if (!t.blkBuf || t.next < t.blkStart || t.next >= t.blkStart + t.blkCount) {
+        const start = t.next * t.chunkSize;
+        const end = Math.min(start + READ_BLOCK, t.size);
+        let buf;
+        try { buf = await t.file.slice(start, end).arrayBuffer(); }
+        catch (_) { failTransfer(t, '本地文件读取失败'); break; }
+        if (t.state !== 'sending') break; // 等待读取期间被取消
+        if (t.pauseLocal || t.pauseRemote || fileChannel.bufferedAmount > HIGH_WATER) continue; // 重新走循环判断
+        if (!buf.byteLength) { failTransfer(t, '本地文件读取异常'); break; } // 防御：文件被截断/读空，避免空转
+        t.blkBuf = buf;
+        t.blkStart = t.next;
+        t.blkCount = Math.ceil(buf.byteLength / t.chunkSize);
+      }
+
+      // 帧缓冲复用：uint32 fileId + uint32 chunkIndex + 原始字节
+      const off = (t.next - t.blkStart) * t.chunkSize;
+      const len = Math.min(t.chunkSize, t.blkBuf.byteLength - off);
+      const dv = new DataView(t.frameBuf.buffer);
       dv.setUint32(0, t.fileId, true);
       dv.setUint32(4, t.next, true);
-      frame.set(new Uint8Array(buf), 8);
-      try { fileChannel.send(frame.buffer); } catch (_) { failTransfer(t, '发送失败'); break; }
+      t.frameBuf.set(new Uint8Array(t.blkBuf, off, len), 8);
+      try { fileChannel.send(t.frameBuf.subarray(0, 8 + len)); } catch (_) { failTransfer(t, '发送失败'); break; }
       t.next++;
     }
     if (t.state === 'sending' && t.next >= t.total) {

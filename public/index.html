@@ -59,7 +59,8 @@
             <button class="menu-item" id="btnHome" role="menuitem">首页</button>
           </div>
         </div>
-        <input type="file" id="fileInput" multiple hidden />
+        <!-- accept="*/*"：部分手机浏览器/WebView 缺省时会弹相册选择器，显式声明才走文件选择器 -->
+        <input type="file" id="fileInput" multiple hidden accept="*/*" />
       </nav>
     </header>
 
