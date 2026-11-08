@@ -112,12 +112,12 @@ function setStatus(state, text) {
   if (serverRow) serverRow.dataset.state = state;
 }
 
-function showToast(text) {
+function showToast(text, ms) {
   if (!toastEl) return;
   toastEl.textContent = text;
   toastEl.hidden = false;
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => { toastEl.hidden = true; }, 1500);
+  showToast._t = setTimeout(() => { toastEl.hidden = true; }, ms || 1500);
 }
 
 // placeholder 在用户开始输入时隐藏
@@ -1283,3 +1283,11 @@ btnTheme && btnTheme.addEventListener('click', () => {
 // 启动
 refreshPlaceholder();
 connectSignaling();
+
+// 首次访问：提示房间号可以点开扫码分享（每个浏览器只提示一次）
+try {
+  if (!localStorage.getItem('st.shareHint')) {
+    localStorage.setItem('st.shareHint', '1');
+    setTimeout(() => showToast('小提示：点击左上角房间号，可扫码分享给对方', 3200), 2600);
+  }
+} catch (_) {}
