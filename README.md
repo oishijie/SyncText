@@ -87,7 +87,7 @@ synctext-clone/
 
 ```bash
 # 1. 克隆并进入项目
-git clone https://github.com/worldoi/SyncText.git
+git clone https://github.com/oishijie/SyncText.git
 cd SyncText
 
 # 2. 启动（默认端口 3000）
@@ -197,6 +197,15 @@ wrangler deploy
 - 历史记录与离线消息
 - 网页版完整互传站（聊天式收发 + 文件浏览，参考 Link Mesh 的产品形态）
 - 真正的多语言文案（当前 EN 仅切换按钮文字）
+
+---
+
+## 📚 文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [AGENTS.md](AGENTS.md) | 开发/代理协作规范：硬性约束、常用命令、架构要点、已知陷阱、发布流程 |
+| [CHANGELOG.md](CHANGELOG.md) | 版本更新记录（Keep a Changelog 格式） |
 
 ---
 

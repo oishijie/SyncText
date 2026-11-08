@@ -1,6 +1,6 @@
 {
   "name": "synctext-clone",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "SyncText 复刻版 - 基于 WebRTC P2P 的网页间实时文本同步工具（零依赖）",
   "main": "server.js",
   "scripts": {
