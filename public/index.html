@@ -145,8 +145,23 @@
     </div>
   </div>
 
+  <!-- 分享房间（二维码 + 链接） -->
+  <div class="share-modal" id="shareModal" role="dialog" aria-label="分享房间" hidden>
+    <div class="share-card">
+      <button class="share-close" id="btnCloseShare" aria-label="关闭">✕</button>
+      <div class="share-title">扫码加入房间</div>
+      <div class="share-qr" id="qrBox"></div>
+      <div class="share-url" id="shareUrlText"></div>
+      <div class="share-hint">手机扫码或输入网址即可进入本房间</div>
+      <div class="share-acts">
+        <button class="btn primary" id="btnCopyShare">复制链接</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" hidden></div>
 
+  <script src="/qrcode.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

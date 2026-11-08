@@ -22,12 +22,24 @@ const ICE_SERVERS = [
 const CONNECT_TIMEOUT_MS = 60 * 1000; // 建连总超时（ICE+DTLS 通常 10-20s，移动网 STUN 重试可到 40s，30s 会误杀）
 
 // ---------- 房间号解析 ----------
+// 8 位无歧义字符（去掉 0/O/1/I/l），约 40bit 熵：防猜测、防手抄混淆
+function randomRoomId() {
+  const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+  const bytes = new Uint8Array(8);
+  try { crypto.getRandomValues(bytes); }
+  catch (_) { for (let i = 0; i < 8; i++) bytes[i] = (Math.random() * 256) | 0; }
+  let id = '';
+  for (const b of bytes) id += alphabet[b % alphabet.length];
+  return id;
+}
+
 function getRoomFromUrl() {
   const m = (location.pathname || '').match(/^\/r\/([^/?#]+)/);
   if (m) return decodeURIComponent(m[1]);
   const qs = new URLSearchParams(location.search);
   if (qs.get('room')) return qs.get('room');
-  return '0808';
+  // 直接访问首页（无房间号）：本地生成随机房间，避免所有人挤进同一房间
+  return randomRoomId();
 }
 const room = getRoomFromUrl();
 const roomEl = document.getElementById('room');
@@ -65,6 +77,12 @@ const dropMask     = document.getElementById('dropMask');
 const roomPill     = document.getElementById('roomPill');
 const btnMore      = document.getElementById('btnMore');
 const moreMenu     = document.getElementById('moreMenu');
+const shareModal   = document.getElementById('shareModal');
+const shareCard    = shareModal ? shareModal.querySelector('.share-card') : null;
+const btnCloseShare= document.getElementById('btnCloseShare');
+const btnCopyShare = document.getElementById('btnCopyShare');
+const qrBox        = document.getElementById('qrBox');
+const shareUrlText = document.getElementById('shareUrlText');
 
 // 顶栏 URL 同步
 try { history.replaceState(null, '', '/r/' + encodeURIComponent(room)); } catch (_) {}
@@ -1106,9 +1124,33 @@ async function copyToClipboard(text) {
 
 const shareUrl = location.origin + '/r/' + encodeURIComponent(room);
 
-btnShare && btnShare.addEventListener('click', async () => {
-  if (await copyToClipboard(shareUrl)) showToast('链接已复制');
-});
+// ---------- 分享弹窗（二维码 + 链接） ----------
+function openShare() {
+  if (!shareModal) return;
+  if (shareUrlText) shareUrlText.textContent = shareUrl;
+  renderQr();
+  shareModal.hidden = false;
+}
+
+function closeShare() {
+  if (shareModal) shareModal.hidden = true;
+}
+
+// 本地 qrcode-generator（MIT，Kazuhiko Arase）渲染 SVG；失败时降级为复制链接提示
+function renderQr() {
+  if (!qrBox) return;
+  try {
+    if (typeof qrcode !== 'function') throw new Error('qrcode 库未加载');
+    const qr = qrcode(0, 'M'); // 0 = 自动选最小版本
+    qr.addData(shareUrl);
+    qr.make();
+    qrBox.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  } catch (_) {
+    qrBox.innerHTML = '<div class="qr-fallback">二维码生成失败<br>请使用「复制链接」</div>';
+  }
+}
+
+btnShare && btnShare.addEventListener('click', openShare);
 
 btnHome && btnHome.addEventListener('click', () => {
   if (confirm('确定要离开当前房间返回首页吗？')) location.href = '/';
@@ -1205,13 +1247,21 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeMenu();
+    closeShare();
     if (popoverOpen && popover) { popoverOpen = false; popover.hidden = true; }
   }
 });
 
-// 房间胶囊：点击即复制分享链接（与「分享链接」按钮同效）
-roomPill && roomPill.addEventListener('click', async () => {
+// 房间胶囊：打开分享弹窗（二维码 + 复制入口，移动端的主分享入口）
+roomPill && roomPill.addEventListener('click', openShare);
+
+// 分享弹窗：复制 / 关闭 / 点遮罩关闭
+btnCopyShare && btnCopyShare.addEventListener('click', async () => {
   if (await copyToClipboard(shareUrl)) showToast('链接已复制');
+});
+btnCloseShare && btnCloseShare.addEventListener('click', closeShare);
+shareModal && shareModal.addEventListener('click', (e) => {
+  if (e.target === shareModal) closeShare();
 });
 
 // ---------- 主题（浅色 / 深色 / 跟随系统） ----------
