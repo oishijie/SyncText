@@ -11,6 +11,7 @@
  */
 
 const http = require('http');
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -233,5 +234,25 @@ server.on('upgrade', (req, socket) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`SyncText 复刻版已启动: http://localhost:${PORT}`);
-  console.log(`手机/另一设备在同一局域网打开 http://<本机IP>:${PORT}/r/<房间ID> 即可配对`);
+
+  // 列出本机所有局域网 IPv4 地址，手机/平板直接扫二维码或输入对应地址即可配对
+  const lan = [];
+  const ifaces = os.networkInterfaces();
+  for (const name of Object.keys(ifaces)) {
+    // 跳过虚拟网卡（VMware/vEthernet/WSL 等）与无效地址
+    if (/vmware|vethernet|loopback|wsl|virtual|hyper-v/i.test(name)) continue;
+    for (const it of ifaces[name] || []) {
+      if (it.family !== 'IPv4' || it.internal || it.address.startsWith('169.254.')) continue;
+      lan.push({ name, addr: it.address });
+    }
+  }
+  if (lan.length) {
+    console.log('\n同一局域网（如手机热点）的其他设备，直接访问：');
+    for (const { name, addr } of lan) {
+      console.log(`  http://${addr}:${PORT}/r/<房间ID>   (${name})`);
+    }
+    console.log('\n提示：电脑打开首页后会生成随机房间号，把地址栏里的完整地址发给手机即可。');
+  } else {
+    console.log('未检测到局域网网卡地址，请确认网络连接后重启本服务。');
+  }
 });

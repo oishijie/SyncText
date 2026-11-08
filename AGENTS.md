@@ -30,6 +30,8 @@
 ```bash
 # 本地开发（Node ≥ 16，零 npm install）
 node server.js                # http://localhost:3000，首页自动生成随机房间
+#                             # 启动时自动打印所有局域网地址（热点场景用）
+#                             # 双击 局域网共享.bat 等效（Windows）
 
 # Cloudflare 本地模拟
 npx wrangler dev --port 8787
