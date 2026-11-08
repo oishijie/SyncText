@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SyncText · 网页间实时文本同步</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234f6bf5'/%3E%3Cstop offset='1' stop-color='%237c93ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='1' y='1' width='22' height='22' rx='6' fill='url(%23g)'/%3E%3Cpath d='M8 12h8M12 8l4 4-4 4' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E" />
   <script>
     // 尽早应用主题，避免深色用户看到白屏闪烁
     try {
@@ -16,65 +17,96 @@
 <body>
   <div class="app">
     <header class="topbar">
-      <div class="room-id">房间号：<span id="room">0808</span></div>
+      <div class="brand">
+        <svg class="logo" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#4f6bf5"/><stop offset="1" stop-color="#7c93ff"/>
+            </linearGradient>
+          </defs>
+          <rect x="1" y="1" width="22" height="22" rx="6" fill="url(#lg)"/>
+          <path d="M8 12h8M12 8l4 4-4 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="brand-name">SyncText</span>
+      </div>
+
+      <button class="room-pill" id="roomPill" title="点击复制分享链接">
+        <span class="room-hash">#</span><span id="room">…</span>
+      </button>
+
+      <button class="status-pill" id="btnStatus" title="连接状态详情">
+        <span class="dot" aria-hidden="true"></span><span id="status" data-state="connecting">连接中</span>
+      </button>
+
       <nav class="actions">
-        <span class="status" id="status" data-state="ready">已就绪</span>
-        <button class="link" id="btnStatus">状态详情</button>
-        <button class="link" id="btnSend">发文件</button>
-        <button class="link" id="btnShare">分享链接</button>
-        <button class="link" id="btnHome">首页</button>
-        <button class="link" id="btnClear">清空</button>
-        <button class="link" id="btnCopyText">复制文本</button>
-        <button class="link" id="btnReconnect">重连接</button>
-        <button class="link" id="btnTheme" title="切换主题：自动 / 深色 / 浅色">自动</button>
-        <button class="link lang" id="btnLang" title="切换语言">EN</button>
+        <button class="btn primary" id="btnSend">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          发文件
+        </button>
+        <button class="btn ghost" id="btnShare">分享链接</button>
+        <div class="menu-wrap">
+          <button class="btn ghost icon" id="btnMore" aria-label="更多操作" aria-haspopup="menu">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+          </button>
+          <div class="menu" id="moreMenu" role="menu" hidden>
+            <button class="menu-item" id="btnCopyText" role="menuitem">复制文本</button>
+            <button class="menu-item" id="btnClear" role="menuitem">清空</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" id="btnTheme" role="menuitem">主题 · 自动</button>
+            <button class="menu-item lang" id="btnLang" role="menuitem" title="切换语言">EN</button>
+            <button class="menu-item" id="btnReconnect" role="menuitem">重连接</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" id="btnHome" role="menuitem">首页</button>
+          </div>
+        </div>
         <input type="file" id="fileInput" multiple hidden />
       </nav>
     </header>
 
     <main class="stage">
-      <div class="editor-wrap">
+      <div class="editor-card">
         <textarea id="editor" class="editor" spellcheck="false" placeholder=""></textarea>
         <div class="placeholder" id="placeholder" aria-hidden="true">
-          <p class="intro">
-            <strong>在此输入</strong>，相同房间号的另一个设备会实时看到。
-          </p>
+          <div class="ph-hero">
+            <svg class="ph-logo" width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="1" y="1" width="22" height="22" rx="6" fill="url(#lg)"/>
+              <path d="M8 12h8M12 8l4 4-4 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h2>两台设备，打开同一链接</h2>
+            <p>文本实时同步，文件 P2P 直传，数据不经服务器。</p>
+          </div>
 
-          <section class="block">
-            <h3>使用步骤</h3>
-            <ol>
-              <li>点击「分享链接」。</li>
-              <li>在另一台设备打开链接。</li>
-              <li>开始输入、粘贴或用手机语音输入。</li>
-            </ol>
-          </section>
+          <ol class="ph-steps">
+            <li><span>1</span>点击右上角「分享链接」，把房间地址发给另一台设备</li>
+            <li><span>2</span>在手机、平板或另一台电脑上打开同一链接</li>
+            <li><span>3</span>输入文字实时同步；点「发文件」或直接拖入文件即可互传</li>
+          </ol>
 
-          <section class="block">
-            <h3>常用方式</h3>
+          <details class="ph-more">
+            <summary>常用方式与注意事项</summary>
             <ul>
               <li>手机语音输入：手机负责长语音输入，电脑负责接收、整理并粘贴到大模型、文档或其他应用。</li>
-              <li>跨端安全同步：在手机、电脑、平板之间临时同步链接、地址、代码片段和备忘，无需登录。</li>
-              <li>互传文件：点「发文件」或直接把文件拖进页面，对方确认后 P2P 直传，带进度、断点续传和 SHA-256 校验。</li>
-            </ul>
-          </section>
-
-          <section class="block compact">
-            <h3>注意事项</h3>
-            <ul>
-              <li>所有文本经 WebRTC 在设备间直接传输，不会上传到服务器，请放心使用。</li>
+              <li>跨端安全同步：在设备之间临时同步链接、地址、代码片段和备忘，无需登录。</li>
+              <li>所有文本与文件经 WebRTC 在设备间直接传输，不会上传到服务器。</li>
               <li>请勿使用简单房间 ID，简单房间 ID 可能被陌生人加入，导致内容泄露。</li>
               <li>连接失败时，尝试刷新页面、关闭 VPN，或在同一局域网内同步。</li>
-              <li>页面内容有本地缓存，刷新后不会丢失。</li>
-              <li>支持跨公网同步，但不保证总是可用；实测手机使用流量、电脑使用 Wi-Fi 可用。</li>
-              <li>VPN 可能导致无法建立 P2P 连接，可配置绕开局域网代理模式；电脑开 VPN、手机关 VPN 的组合实测可用。</li>
-              <li>房间无人数上限，但页面按两人场景设计，人多了内容会互相覆盖，建议两人使用。</li>
-              <li>问题反馈与源码：<a href="https://github.com/worldoi/SyncText" target="_blank" rel="noopener noreferrer">github.com/worldoi/SyncText</a></li>
+              <li>支持跨公网同步，但不保证总是可用；实测手机流量、电脑 Wi-Fi 可用。</li>
+              <li>VPN 可能导致无法建立 P2P 连接，可配置绕开局域网代理模式。</li>
+              <li>房间无人数上限，但页面按两人场景设计，建议两人使用。</li>
             </ul>
-          </section>
+          </details>
         </div>
       </div>
 
-        <div class="status-popover" id="statusPopover" role="dialog" aria-label="连接状态详情" hidden>
+      <footer class="foot">
+        <span class="foot-note">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="2"/></svg>
+          端到端 P2P 直传 · 数据不经服务器
+        </span>
+        <a href="https://github.com/worldoi/SyncText" target="_blank" rel="noopener noreferrer">问题反馈 · GitHub</a>
+      </footer>
+
+      <div class="status-popover" id="statusPopover" role="dialog" aria-label="连接状态详情" hidden>
         <div class="row server" data-state="connected">与信令服务器已连接</div>
         <div class="row peer">本机：<span id="myId">—</span></div>
         <div class="row peer">对方：<span id="peerId">—</span></div>
@@ -84,29 +116,32 @@
     </main>
   </div>
 
+  <!-- 文件传输卡片堆栈 -->
+  <div class="transfers" id="transfers" hidden></div>
+
   <!-- 文件接收确认 -->
   <div class="confirm-box" id="confirmBox" role="dialog" aria-label="文件接收确认" hidden>
-    <div class="confirm-title">收到文件</div>
-    <div class="confirm-name" id="confirmName"></div>
-    <div class="confirm-meta" id="confirmMeta"></div>
-    <div class="confirm-hint" id="confirmHint"></div>
-    <div class="confirm-acts">
-      <button id="btnAccept">接收</button>
-      <button id="btnReject" class="danger">拒绝</button>
+    <div class="confirm-card">
+      <div class="confirm-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 4v12m0 0 5-5m-5 5-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 20h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="confirm-title">收到文件请求</div>
+      <div class="confirm-name" id="confirmName"></div>
+      <div class="confirm-meta" id="confirmMeta"></div>
+      <div class="confirm-hint" id="confirmHint"></div>
+      <div class="confirm-acts">
+        <button class="btn primary" id="btnAccept">接收</button>
+        <button class="btn ghost danger" id="btnReject">拒绝</button>
+      </div>
     </div>
   </div>
 
-  <!-- 传输卡片堆栈 -->
-  <div class="transfers" id="transfers" hidden></div>
-
   <!-- 拖放遮罩 -->
   <div class="drop-mask" id="dropMask" hidden>
-    <div class="drop-inner">松开即发送给对方</div>
-  </div>
-
-  <div class="floating-actions" aria-hidden="true">
-    <div class="float-btn feedback" title="反馈">F</div>
-    <div class="float-btn copilot" title="Copilot">C</div>
+    <div class="drop-inner">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4m0 0 5 5m-5-5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 20h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      松开即发送给对方
+    </div>
   </div>
 
   <div class="toast" id="toast" role="status" hidden></div>

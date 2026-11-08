@@ -62,6 +62,9 @@ const btnAccept    = document.getElementById('btnAccept');
 const btnReject    = document.getElementById('btnReject');
 const autoAcceptEl = document.getElementById('autoAccept');
 const dropMask     = document.getElementById('dropMask');
+const roomPill     = document.getElementById('roomPill');
+const btnMore      = document.getElementById('btnMore');
+const moreMenu     = document.getElementById('moreMenu');
 
 // 顶栏 URL 同步
 try { history.replaceState(null, '', '/r/' + encodeURIComponent(room)); } catch (_) {}
@@ -293,7 +296,10 @@ function scheduleSend() {
   if (!channel || channel.readyState !== 'open') return;
   if (rafPending) return;
   rafPending = true;
-  requestAnimationFrame(() => { rafPending = false; sendText(); });
+  const flush = () => { rafPending = false; sendText(); };
+  // 后台标签页的 rAF 永远不会触发（会卡住 rafPending），隐藏时降级为定时器
+  if (document.hidden) setTimeout(flush, 50);
+  else requestAnimationFrame(flush);
 }
 function sendText() {
   if (!channel || channel.readyState !== 'open') return;
@@ -412,11 +418,18 @@ function withTimeout(p, ms, tag) {
 function makeCard(t) {
   const el = document.createElement('div');
   el.className = 'tcard' + (t.dir === 'send' ? ' out' : ' in');
+  // 扩展名徽标（无扩展名显示「文件」）；最长 4 字符避免撑爆图标位
+  const dot = t.name.lastIndexOf('.');
+  const ext = dot > 0 ? t.name.slice(dot + 1).slice(0, 4).toUpperCase() : '文件';
   el.innerHTML =
-    '<div class="t-head"><span class="t-name"></span><span class="t-size"></span></div>' +
-    '<div class="t-bar"><i></i></div>' +
-    '<div class="t-meta"><span class="t-state"></span><span class="t-speed"></span></div>' +
-    '<div class="t-acts"><button class="t-btn pause" hidden></button><button class="t-btn cancel">✕</button></div>';
+    '<div class="t-icon"></div>' +
+    '<div class="t-body">' +
+      '<div class="t-head"><span class="t-name"></span><span class="t-size"></span></div>' +
+      '<div class="t-bar"><i></i></div>' +
+      '<div class="t-meta"><span class="t-state"></span><span class="t-speed"></span></div>' +
+    '</div>' +
+    '<div class="t-acts"><button class="t-btn pause" hidden></button><button class="t-btn cancel" title="取消">✕</button></div>';
+  el.querySelector('.t-icon').textContent = ext;
   el.querySelector('.t-name').textContent = t.name;
   el.querySelector('.t-size').textContent = formatBytes(t.size);
   const btnPause = el.querySelector('.t-btn.pause');
@@ -1147,12 +1160,39 @@ if (autoAcceptEl) {
   });
 }
 
+// ---------- 更多菜单 ----------
+function closeMenu() {
+  if (moreMenu) moreMenu.hidden = true;
+}
+btnMore && btnMore.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!moreMenu) return;
+  moreMenu.hidden = !moreMenu.hidden;
+});
+moreMenu && moreMenu.addEventListener('click', (e) => {
+  if (e.target.closest('button')) closeMenu(); // 点任意菜单项后自动收起
+});
+document.addEventListener('click', (e) => {
+  if (moreMenu && !moreMenu.hidden && !moreMenu.contains(e.target) && !btnMore.contains(e.target)) closeMenu();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeMenu();
+    if (popoverOpen && popover) { popoverOpen = false; popover.hidden = true; }
+  }
+});
+
+// 房间胶囊：点击即复制分享链接（与「分享链接」按钮同效）
+roomPill && roomPill.addEventListener('click', async () => {
+  if (await copyToClipboard(shareUrl)) showToast('链接已复制');
+});
+
 // ---------- 主题（浅色 / 深色 / 跟随系统） ----------
 const THEME_KEY = 'st.theme';
 function applyTheme(mode) {
   if (mode === 'dark' || mode === 'light') document.documentElement.dataset.theme = mode;
   else document.documentElement.removeAttribute('data-theme');
-  if (btnTheme) btnTheme.textContent = mode === 'dark' ? '深色' : mode === 'light' ? '浅色' : '自动';
+  if (btnTheme) btnTheme.textContent = mode === 'dark' ? '主题 · 深色' : mode === 'light' ? '主题 · 浅色' : '主题 · 自动';
 }
 let themeMode = 'auto';
 try { themeMode = localStorage.getItem(THEME_KEY) || 'auto'; } catch (_) {}
@@ -1161,18 +1201,6 @@ btnTheme && btnTheme.addEventListener('click', () => {
   themeMode = themeMode === 'auto' ? 'dark' : themeMode === 'dark' ? 'light' : 'auto';
   try { localStorage.setItem(THEME_KEY, themeMode); } catch (_) {}
   applyTheme(themeMode);
-});
-
-// 浮动按钮：反馈按钮指向 GitHub 仓库；其余为装饰占位（与原站右下圆形按钮位置一致）
-document.querySelectorAll('.float-btn').forEach((el) => {
-  el.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (el.classList.contains('feedback')) {
-      window.open('https://github.com/worldoi/SyncText', '_blank', 'noopener');
-      return;
-    }
-    showToast(el.title || '操作');
-  });
 });
 
 // 启动
